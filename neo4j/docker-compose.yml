@@ -2,32 +2,64 @@ version: '3.8'
 
 services:
   neo4j:
-    image: neo4j:4.4-community
+    build:
+      context: .
+      dockerfile: dockerfiles/neo4j.dockerfile
+    image: neo4j
     container_name: neo4j
     ports:
-      - 7687:7687
-      - 7474:7474
-      - 7473:7473
+      - "${BOLT_PORT}:${BOLT_PORT}"
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${HTTPS_PORT}:${HTTPS_PORT}"
     environment:
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
-      - NEO4J_AUTH=neo4j/Neo4j
+      - NEO4J_AUTH=neo4j/1234567890
+      - NEO4J_dbms_bolt_enabled=true
+      - NEO4J_server_metrics_prometheus_enabled=true
+      - NEO4J_server_config_strict__validation_enabled=false
+      - NEO4J_server_metrics_prometheus_endpoint=neo4j:2004
     volumes:
-      - ../data/neo4j/data:/data
-      - ../data/neo4j/logs:/logs
-      - ../data/neo4j/plugins:/var/lib/neo4j/plugins
+      - "${DATA_PATH}/neo4j/data:/data"
+      - "${DATA_PATH}/neo4j/logs:/logs"
+      - "${DATA_PATH}/neo4j/plugins:/var/lib/neo4j/plugins"
+      - "${DATA_PATH}/neo4j/metrics:/var/lib/neo4j/metrics"
+    networks:
+      - neo4j-network
+    restart: no
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -q -O- http://localhost:7474"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+    volumes:
+      - "${CORE_PATH}/configs/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "${DATA_PATH}/prometheus_data:/prometheus"
+    depends_on:
+      neo4j:
+        condition: service_healthy
     networks:
       - neo4j-network
     restart: no
 
   app:
+    build:
+      context: .
+      dockerfile: dockerfiles/python-app.dockerfile
     image: neo4j_client
     container_name: python-app
     depends_on:
-      - neo4j
+      neo4j:
+        condition: service_healthy
     environment:
-      - NEO4J_URI=neo4j://neo4j:7687
+      - NEO4J_URI=bolt://neo4j:7687/?database=neo4j
       - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=Neo4j
+      - NEO4J_PASSWORD=1234567890
     networks:
       - neo4j-network
     restart: no

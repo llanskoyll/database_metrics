@@ -14,13 +14,10 @@ def log():
 class Driver:
     def __init__(self):
         try:
-            uri = os.getenv("NEO4J_URI", "neo4j://neo4j:7687")
-            username = os.getenv("NEO4J_USER", "neo4j")
-            password = os.getenv("NEO4J_PASSWORD", "Neo4j")
+            uri = os.getenv("NEO4J_URI", "neo4j://neo4j:7687/?database=neo4j")
             self.__driver = GraphDatabase.driver(
-                uri, auth=(username, password), encrypted=False
+                uri, encrypted=False
             )
-            self.__driver.verify_connectivity()
             log().info("Success connect to database")
         except Exception as e:
             log().error(f"Failed open driver: {e}")
