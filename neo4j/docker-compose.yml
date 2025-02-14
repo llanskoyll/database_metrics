@@ -47,6 +47,26 @@ services:
       - neo4j-network
     restart: no
 
+  grafana:
+    image: grafana/grafana-enterprise:latest
+    container_name: grafana
+    hostname: grafana
+    ports:
+      - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+    environment:
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=admin
+    volumes:
+      - "${DATA_PATH}/grafana:/var/lib/grafana"
+      - "${DATA_PATH}/grafana/provisioning:/etc/grafana/provisioning"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - neo4j-network
+    restart: no
+
   app:
     build:
       context: .

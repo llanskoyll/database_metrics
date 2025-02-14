@@ -1,14 +1,15 @@
 import db_driver
 import db_wrapper
+import time
 
 def print_accounts(wrapper, name):
     query = (
         "MATCH (b:Bank)-[:HAVE]->(a:Account) WHERE b.name = $name "
         "RETURN a.sum ORDER BY a.sum"
     )
-    # records, _, _ = wrapper.execute_query_read(query, name=name)
-    # for record in records:
-    #         print(record["a.sum"])
+    records, _, _ = wrapper.execute_query_read(query, name=name)
+    for record in records:
+            print(record["a.sum"])
 
 
 def add_accounts(wrapper, name, sums):
@@ -25,6 +26,8 @@ def add_accounts(wrapper, name, sums):
 if __name__ == "__main__":
     wrapper = db_wrapper.DBWrapper(db_driver.Driver())
 
-    account_sums = list(range(100))
-    add_accounts(wrapper, "SBER", account_sums)
-    print_accounts(wrapper, "SBER")
+    while True:
+        account_sums = list(range(20))
+        add_accounts(wrapper, "SBER", account_sums)
+        print_accounts(wrapper, "SBER")
+        time.sleep(5)
