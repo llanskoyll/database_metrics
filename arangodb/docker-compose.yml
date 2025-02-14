@@ -1,0 +1,61 @@
+services:
+  arangodb:
+    build:
+      context: "${CORE_PATH}"
+      dockerfile: dockerfiles/arangodb.dockerfile
+    image: arangodb
+    container_name: arangodb
+    hostname: arangodb
+    environment:
+      - ARANGO_NO_AUTH=1
+      - ARANGO_METRICS_ENABLED=true
+      - "ARANGO_METRICS_PORT=${ARANGODB_METRIC_PORT}"
+    volumes:
+      - "${DATA_PATH}/arangodb/data:/var/lib/arangodb3"
+      - "${DATA_PATH}/arangodb/apps:/var/lib/arangodb3-apps"
+    ports:
+      - "${ARANGODB_PORT}:${ARANGODB_PORT}"
+      - "${ARANGODB_METRIC_PORT}:${ARANGODB_METRIC_PORT}"
+    networks:
+      - db_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "${ARANGODB_URL}"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    restart: no
+  
+  app:
+    build:
+      context: "${CORE_PATH}"
+      dockerfile: dockerfiles/app.dockerfile
+    image: app
+    container_name: app
+    environment:
+      - "ARANGODB_URL=${ARANGODB_URL}"
+    depends_on:
+      arangodb:
+        condition: service_healthy
+    networks:
+      - db_network
+    restart: no
+    
+  prometheus:
+    image: bitnami/prometheus:latest
+    container_name: prometheus
+    hostname: prometheus
+    ports:
+      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+    volumes:
+      - "${CORE_PATH}/configs/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "${DATA_PATH}/prometheus_data:/prometheus"
+    networks:
+      - db_network
+    restart: no
+    depends_on:
+      arangodb:
+        condition: service_healthy
+
+networks:
+  db_network:
+    driver: bridge
